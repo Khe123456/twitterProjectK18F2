@@ -1,4 +1,4 @@
-//5
+//5 lưu trữ các file cấu trúc dữ liệu(json hoặc yaml):trường dl, kiểu dl, ràng buộc dl,.... giúp cho các nhà phat triển hiểu rõ hơn về dữ liệu mà họ đang làm việc
 import { ObjectId } from 'mongodb'
 import { UserVerifyStatus } from '~/constants/enums'
 
@@ -6,7 +6,7 @@ import { UserVerifyStatus } from '~/constants/enums'
 interface UserType {
   //interface: mô tả: để mô tả 1 cái user khi mô tả chỉ cần email và bắt buộc
   _id?: ObjectId
-  name: string //optinal là ?
+  name: string //optinal là ? //xóa dấu ? do payload có full thuộc tính:name:... mà name thì not empty=>xóa dấu ? để biến từ optional=>required=>chặt chẽ hơn
   email: string //required
   date_of_birth?: Date
   password: string
