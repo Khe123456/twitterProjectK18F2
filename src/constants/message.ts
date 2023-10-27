@@ -24,5 +24,9 @@ export const USERS_MESSAGES = {
   //dateOfBirth
   DATE_OF_BIRTH_BE_ISO8601: 'Date of birth must be ISO8601',
   //user
-  EMAIL_OR_PASSWORD_IS_INCORRECT: 'Email or password is incorrect'
-} as const
+  EMAIL_OR_PASSWORD_IS_INCORRECT: 'Email or password is incorrect',
+  LOGIN_SUCCESS: 'Login success',
+  REGISTER_SUCCESS: 'Register success',
+  ACCESS_TOKEN_IS_REQUIRED: 'Access token is required',
+  REFRESH_TOKEN_IS_REQUIRED: 'Refresh token is required'
+} as const //as const: biến thành hằng số=> ko ai thay đổi đc

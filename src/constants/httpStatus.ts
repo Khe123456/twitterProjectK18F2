@@ -1,3 +1,4 @@
+//lưu các biến khai báo lỗi
 const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
@@ -7,6 +8,6 @@ const HTTP_STATUS = {
   UNAUTHORIZED: 401,
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500
-}
+} as const
 
-export default HTTP_STATUS
+export default HTTP_STATUS //vd: HTTP_STATUS.OK => 200

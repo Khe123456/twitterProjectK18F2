@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 app.use('/users', userRoute)
 //localhost:3000/users/tweets
 
-app.use(defaultErrorHandler)
+app.use(defaultErrorHandler) //fix lỗi lluon6 hiện status 400//hàm tập hợp tất cả các lỗi về cùng 1 chỗ //error handler tổng. hàm xử lý lỗi phải nằm cuối cùng, nhưng ko đc nằm sau listen
 
 app.listen(PORT, () => {
   console.log(`server dang chay tren port ${PORT}`)

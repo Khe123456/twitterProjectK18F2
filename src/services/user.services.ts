@@ -4,6 +4,8 @@ import { RegisterReqBody } from '~/models/requests/User.request'
 import { hashPassword } from '~/utils/crypto'
 import { signToken } from '~/utils/jwt'
 import { TokenType } from '~/constants/enums'
+import RefreshToken from '~/models/schema/RefreshToken.schema'
+import { ObjectId } from 'mongodb'
 
 class UsersService {
   //hàm nhận vào user_Id(để định danh mình là ai) và bỏ vào payload để tạo access_Token
@@ -27,6 +29,7 @@ class UsersService {
   //ký access_token và refresh
   async signAcessAndRefreshToken(user_id: string) {
     return Promise.all([
+      //ko cần dùng asyn await vì bản chất nó cũng chỉ để return về 1 Promise. còn thk nào xài mình thì nó tự động asyn await
       //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
       this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
       this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
@@ -53,16 +56,31 @@ class UsersService {
     const user_id = result.insertedId.toString() //lấy cái id(mã) để bem ra acess và refresh Token
     const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
     //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
-    this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
-      this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
+    // this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
+    //   this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
 
+    //lưu refresh_token vào database
+    await databaseService.refreshTokens.insertOne(
+      new RefreshToken({
+        token: refresh_token,
+        user_id: new ObjectId(user_id)
+      })
+    )
     return { access_token, refresh_token } //trả cái object trả về access và refreshToken
   }
   async login(user_id: string) {
+    //login nhận vào 1 user_id(dùng để tạo access và refreshToken)
     const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
     //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
-    this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
-      this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
+    // this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
+    //   this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
+    //lưu refresh_token vào database
+    await databaseService.refreshTokens.insertOne(
+      new RefreshToken({
+        token: refresh_token,
+        user_id: new ObjectId(user_id)
+      })
+    )
 
     return { access_token, refresh_token }
   }
