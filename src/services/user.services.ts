@@ -6,6 +6,7 @@ import { signToken } from '~/utils/jwt'
 import { TokenType } from '~/constants/enums'
 import RefreshToken from '~/models/schema/RefreshToken.schema'
 import { ObjectId } from 'mongodb'
+import { USERS_MESSAGES } from '~/constants/message'
 
 class UsersService {
   //hàm nhận vào user_Id(để định danh mình là ai) và bỏ vào payload để tạo access_Token
@@ -84,6 +85,11 @@ class UsersService {
 
     return { access_token, refresh_token }
   }
+  async logout(refresh_token: string) {
+    await databaseService.refreshTokens.deleteOne({ token: refresh_token })
+    return { message: USERS_MESSAGES.LOGOUT_SUCCESS }
+  }
 }
+
 const usersService = new UsersService()
 export default usersService

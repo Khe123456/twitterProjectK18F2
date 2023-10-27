@@ -3,6 +3,7 @@
 //jwt.sign(payload, secretOrPrivateKey,[options,callback]) =>làm cái hàm custom lại thay vì sdung trực tiếp
 //hàm tạo token bỏ vào utils jwt.ts
 import jwt from 'jsonwebtoken'
+import { TokenPayLoad } from '~/models/requests/User.request'
 
 //làm hàm nhận vào payload, privateKey, options từ đó kí tên
 export const signToken = ({
@@ -37,7 +38,7 @@ export const verifyToken = ({
   secretOrPublicKey?: string
 }) => {
   //trả về JwtPayload(thông tin người gữi req) nếu token hợp lệ
-  return new Promise<jwt.JwtPayload>((resolve, reject) => {
+  return new Promise<TokenPayLoad>((resolve, reject) => {
     //method này sẽ verify token, nếu token hợp lệ thì nó sẽ trả về payload
     //nếu token không hợp lệ thì nó sẽ throw error
     //secretOrPublicKey dùng để verify token
@@ -46,7 +47,7 @@ export const verifyToken = ({
     jwt.verify(token, secretOrPublicKey, (error, decoded) => {
       //callback:(error, decoded)
       if (error) throw reject(error)
-      resolve(decoded as jwt.JwtPayload)
+      resolve(decoded as TokenPayLoad)
     })
   })
 }

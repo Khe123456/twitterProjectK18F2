@@ -1,4 +1,8 @@
 //=> lưu vào thư mục models => requests=> sau này có req nào cần định nghĩa body thì nhét vào đây
+
+import { JwtPayload } from 'jsonwebtoken'
+import { TokenType } from '~/constants/enums'
+
 //những định nghĩa liên quan đến class user
 export interface RegisterReqBody {
   //interface: dùng để định nghĩa
@@ -7,4 +11,18 @@ export interface RegisterReqBody {
   password: string
   confirm_password: string
   date_of_birth: string
+}
+
+export interface loginReqBody {
+  email: string
+  password: string
+}
+
+export interface logoutReqBody {
+  refresh_token: string
+}
+
+export interface TokenPayLoad extends JwtPayload {
+  user_id: string
+  token_type: TokenType
 }

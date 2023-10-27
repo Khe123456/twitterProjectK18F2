@@ -5,12 +5,12 @@ import User from '~/models/schema/user.schema'
 import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
 import { ParamsDictionary } from 'express-serve-static-core'
-import { RegisterReqBody } from '~/models/requests/User.request'
+import { RegisterReqBody, loginReqBody, logoutReqBody } from '~/models/requests/User.request'
 import { ErrorWithStatus } from '~/models/Errors'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/message'
 
-export const loginController = async (req: Request, res: Response) => {
+export const loginController = async (req: Request<ParamsDictionary, any, loginReqBody>, res: Response) => {
   //dù lả controller hay middleware thì bản chất nó vẫn là request handler=> có next vẫn đúng(với mỗi req handle thì chúng ta sẽ có 3 tham số là req, res, next. nếu ko dùng next thì ko cần khai báo vẫn đc)
   //nếu ko import 2 thk này nó sẽ hiểu mình dang xài của FetchAPI chứ ko phải express
   //lấy user_id từ user của request
@@ -35,8 +35,9 @@ export const registerController = async (req: Request<ParamsDictionary, any, Reg
   })
 }
 
-export const logoutController = async (req: Request, res: Response) => {
-  res.json({
-    message: 'logout success'
-  })
+export const logoutController = async (req: Request<ParamsDictionary, any, logoutReqBody>, res: Response) => {
+  const { refresh_token } = req.body
+  //logout se nhận vào refreshToken để tìm và xóa
+  const result = await usersService.logout(refresh_token)
+  res.json(result)
 }
