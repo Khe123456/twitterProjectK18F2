@@ -2,11 +2,17 @@
 import { Router } from 'express'
 import {
   accessTokenValidator,
+  emailVerifyTokenValidator,
   loginValidator,
   refreshTokenValidator,
   registerValidator
 } from '~/middlewares/user.middlewares'
-import { loginController, logoutController, registerController } from '~/controllers/user.controller'
+import {
+  emailVerifyTokenController,
+  loginController,
+  logoutController,
+  registerController
+} from '~/controllers/user.controller'
 import { error } from 'console'
 import { wrapAsync } from '~/utils/handlers'
 
@@ -44,4 +50,17 @@ userRoute.post('/register', registerValidator, wrapAsync(registerController)) //
   body: {refresh_token: string}
   */
 userRoute.post('/logout', accessTokenValidator, refreshTokenValidator, wrapAsync(logoutController)) //ta sẽ thêm middleware sau
+/**
+ des: verify email token
+ khui nguoi dung dki ho se nhan dc mail co link dạng
+ http://localhost:3000/users/verify-email?token=<email_verify_token>
+ neu ma em nhap vao link thi se tao ra req gui len mail_verify_token len server
+ server ktra  email_verify_token co hop le hay ko
+ thi tu decoded_email_verify_token lay ra user_id
+ va va0 user_id đó de update email_verify_token thành '', verify = 1, update_at
+ path: /users/verify-email
+ method:POST
+ body: {email_verify_token: string}
+ */
+userRoute.post('/verify-email', emailVerifyTokenValidator, wrapAsync(emailVerifyTokenController))
 export default userRoute

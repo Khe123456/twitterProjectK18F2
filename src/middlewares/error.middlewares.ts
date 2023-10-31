@@ -11,7 +11,7 @@ export const defaultErrorHandler = (err: any, req: Request, res: Response, next:
   //=> ta cần loại bỏ cái thuộc tính status, còn các thuộc tính còn lại gửi cho người dùng
   //=> lên lodash.com(xài omit) (cài trước: npm i lodash(ra sản phẩm chạy = javascript) và npm install @type/lodash -D(BUILD = TYPE SCRIPT chạy trong dev-dependency))
   if (err instanceof ErrorWithStatus) {
-    res.status(err.status).json(omit(err, ['status'])) //omit có khả năng loại bỏ thuộc tính = cách truyền vào obj(err) và tên của thuộc tính dưới dạng mảng 'status' => cò delete.err=> sẽ tạo ra 1 lỗ thủng chà bá=>ko dùng
+    return res.status(err.status).json(omit(err, ['status'])) //omit có khả năng loại bỏ thuộc tính = cách truyền vào obj(err) và tên của thuộc tính dưới dạng mảng 'status' => cò delete.err=> sẽ tạo ra 1 lỗ thủng chà bá=>ko dùng
   }
   //nếu mà lỗi xún đc đây thì là lỗi mặc định/ mình nhận đc ko phải là errorwithstatus mà là lỗi error bth=> phải biến enumberable về true ms báo lỗi đc
   //set, name, stack , massage vế enumberable true

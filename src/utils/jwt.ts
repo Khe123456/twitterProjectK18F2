@@ -9,13 +9,13 @@ import { TokenPayLoad } from '~/models/requests/User.request'
 export const signToken = ({
   // =>cái đống này phải là object
   payload,
-  privateKey = process.env.JWT_SECRET as string, //đôi khi mún để mặc định: khi kí chỉ cần móc ra(lưu trong env.)nếu như tạo token mà ko đua nó cái gì hết thì đưa ra cái mật khẩu này
+  privateKey, //đôi khi mún để mặc định: khi kí chỉ cần móc ra(lưu trong env.)nếu như tạo token mà ko đua nó cái gì hết thì đưa ra cái mật khẩu này
   options = { algorithm: 'HS256' } //ko nói gì hết sẽ tự đưa thuật toán HS256
-  //ko để callback do kí tên sẽ có khả năng bug=> callback sẽ xu ly và ném ra lỗi=> sử dụng riêng: ko mún nta độ chế lại
-}: {
+} //ko để callback do kí tên sẽ có khả năng bug=> callback sẽ xu ly và ném ra lỗi=> sử dụng riêng: ko mún nta độ chế lại
+: {
   // dấu : để dịnh nghĩa object
   payload: string | object | Buffer //buffer là kiểu dữ liệu của payload
-  privateKey?: string
+  privateKey: string
   options: jwt.SignOptions //rê chuột vào sign tìm cái options copy ra
 }) => {
   //Promise<string: biết là kí tên sẽ trả về token=> chuỗi
@@ -30,13 +30,7 @@ export const signToken = ({
 }
 
 //hàm nhận vào token và secretOrPublicKey?
-export const verifyToken = ({
-  token,
-  secretOrPublicKey = process.env.JWT_SECRET as string
-}: {
-  token: string
-  secretOrPublicKey?: string
-}) => {
+export const verifyToken = ({ token, secretOrPublicKey }: { token: string; secretOrPublicKey: string }) => {
   //trả về JwtPayload(thông tin người gữi req) nếu token hợp lệ
   return new Promise<TokenPayLoad>((resolve, reject) => {
     //method này sẽ verify token, nếu token hợp lệ thì nó sẽ trả về payload

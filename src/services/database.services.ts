@@ -35,7 +35,7 @@ export class DatabaseService {
   get refreshTokens(): Collection<RefreshToken> {
     // ở đây ko mô tả users thì nó sẽ hiểu là Document và mình sẽ ko chấm đc các thuộc tính có sẵn ở trên//Collection này lấy từ monggo nên phải import ở trên  //connect xong phải vào cái hàm users//get là accessorproperty(nên nó sẽ hiểu user là 1 thuộc tính)
     return this.db.collection(process.env.DB_REFRESH_TOKENS_COLLECTION as string) //DB_USERS_COLLECTION trong .env là users //yên tâm tao tạo ra sure kèo nên mới as string để ko lỗi
-  }
+  } //khi gọi sẽ đưa collection refrestoken nếu database chưa có=> trạo mới, có rồi, móc ra đưa co mình
 }
 const databaseService = new DatabaseService()
 export default databaseService

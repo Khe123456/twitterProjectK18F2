@@ -5,10 +5,12 @@ import User from '~/models/schema/user.schema'
 import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
 import { ParamsDictionary } from 'express-serve-static-core'
-import { RegisterReqBody, loginReqBody, logoutReqBody } from '~/models/requests/User.request'
+import { RegisterReqBody, TokenPayLoad, loginReqBody, logoutReqBody } from '~/models/requests/User.request'
 import { ErrorWithStatus } from '~/models/Errors'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/message'
+import HTTP_STATUS from '~/constants/httpStatus'
+import { UserVerifyStatus } from '~/constants/enums'
 
 export const loginController = async (req: Request<ParamsDictionary, any, loginReqBody>, res: Response) => {
   //dù lả controller hay middleware thì bản chất nó vẫn là request handler=> có next vẫn đúng(với mỗi req handle thì chúng ta sẽ có 3 tham số là req, res, next. nếu ko dùng next thì ko cần khai báo vẫn đc)
@@ -40,4 +42,30 @@ export const logoutController = async (req: Request<ParamsDictionary, any, logou
   //logout se nhận vào refreshToken để tìm và xóa
   const result = await usersService.logout(refresh_token)
   res.json(result)
+}
+
+export const emailVerifyTokenController = async (req: Request, res: Response) => {
+  //nếu mà code vào được đây nghĩa là email_verify_token hợp lệ
+  //và mình da lay dc decoded_email_verify_token
+  const { user_id } = req.decoded_email_verify_token as TokenPayLoad
+  //dua vao user_id tìm user và xem thử nó đã verify chưa?
+  const user = await databaseService.users.findOne({ _id: new ObjectId(user_id) })
+  if (user === null) {
+    throw new ErrorWithStatus({
+      message: USERS_MESSAGES.USER_NOT_FOUND,
+      status: HTTP_STATUS.NOT_FOUND
+    })
+  }
+  if (user.verify === UserVerifyStatus.Verified && user.email_verify_token === '') {
+    return res.json({
+      message: USERS_MESSAGES.EMAIL_ALREADY_VERIFIED_BEFORE
+    })
+  }
+  //nếu mà xún dc day co nghia la user chưa verify
+  //mình se update lại user đó
+  const result = await usersService.verifyEmail(user_id)
+  return res.json({
+    message: USERS_MESSAGES.VERIFY_EMAIL_SUCCESS,
+    result
+  })
 }

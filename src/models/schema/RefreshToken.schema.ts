@@ -13,9 +13,10 @@ interface RefreshTokenType {
 //class này < databse < service < controller < route < app.ts < server.ts < index.ts
 
 export default class RefreshToken {
+  //ding95 nghĩa 1 refreshToken có gì
   _id?: ObjectId //khi client gửi lên thì không cần truyền _id
-  token: string
-  created_at: Date
+  token: string // lưu refresh-Token
+  created_at: Date //ngảy khởi tạo
   user_id: ObjectId
   constructor({ _id, token, created_at, user_id }: RefreshTokenType) {
     this._id = _id
