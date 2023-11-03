@@ -1,6 +1,6 @@
 //src/controllers: Chứa các file nhận request, gọi đến service để xử lý logic nghiệp vụ, trả về response
 //3
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import User from '~/models/schema/user.schema'
 import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
@@ -150,3 +150,20 @@ export const resetPasswordController = async (
   const result = await usersService.resetPassword({ user_id, password }) //ta chưa code resetPassword
   return res.json(result)
 }
+
+export const getMeController = async (
+  req: Request,
+  res: Response
+  //next: NextFunction
+) => {
+  //middleware accessTokenValidator đã chạy rồi, nên ta có thể lấy đc user_id từ decoded_authorization
+  const { user_id } = req.decode_authorization as TokenPayLoad
+  //tìm user thông qua user_id này và trả về user đó
+  //truy cập vào database nên ta sẽ code ở user.services
+  const user = await usersService.getMe(user_id) // hàm này ta chưa code, nhưng nó dùng user_id tìm user và trả ra user đó
+  return res.json({
+    message: USERS_MESSAGES.GET_ME_SUCCESS,
+    result: user
+  })
+}
+//trong messages.ts thêm GET_ME_SUCCESS: 'Get me success'
