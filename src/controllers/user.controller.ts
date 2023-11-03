@@ -6,9 +6,11 @@ import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
 import { ParamsDictionary } from 'express-serve-static-core'
 import {
+  GetProfileReqParams,
   RegisterReqBody,
   ResetPasswordReqBody,
   TokenPayLoad,
+  UpdateMeReqBody,
   VerifyEmailReqBody,
   loginReqBody,
   logoutReqBody
@@ -26,7 +28,7 @@ export const loginController = async (req: Request<ParamsDictionary, any, loginR
   const user = req.user as User //lấy user ra từ req(param,body,query)
   const user_id = user._id as ObjectId //object_id //code như vậy vì chưa định nghĩa bên trong req có gì(type.d.ts)
   //dùng user_id để tạo access_token và refresh_token //vì muốn kí 1 chữ ký thì token mặc định đc dùng để định danh 1 đối tượng. mà user_id phải định danh đối tượng=>(dấu cái user_id vào trong payload của token)=> mún kí 1 access và refreshtoken phải user_id. Nếu hồi này mình ko lưu thk user lại thì chỗ này mình phải query để lấy(trong user.middleware dòng 42: req.user = user)
-  const result = await usersService.login(user_id.toString()) //.toString( vì khi tạo hàm login ta sẽ truyền user_id dưới dạng string nhưng controller thì user_id lấy từ _id mà _id là 1 objectid(id tạo từ mongo) => đúng là phải toString()) //login này sẽ tạo access và refresh token //login này chưa làm(tạo acess và refresh token)
+  const result = await usersService.login({ user_id: user_id.toString(), verify: user.verify }) //.toString( vì khi tạo hàm login ta sẽ truyền user_id dưới dạng string nhưng controller thì user_id lấy từ _id mà _id là 1 objectid(id tạo từ mongo) => đúng là phải toString()) //login này sẽ tạo access và refresh token //login này chưa làm(tạo acess và refresh token)
   //response access_token và refresh_token cho client:vì nó dnhap thành công. nếu ko tcong: dính lỗi bên validation
   res.json({
     message: USERS_MESSAGES.LOGIN_SUCCESS,
@@ -120,9 +122,12 @@ export const resendEmailVerifyController = async (req: Request, res: Response) =
 
 export const forgotPasswordController = async (req: Request, res: Response) => {
   //lấy user_id từ cái user cua req
-  const { _id } = req.user as User
+  const { _id, verify } = req.user as User
   //dùng _id tìm và cap nhat lai user them vao forgot_pwd_token
-  const result = await usersService.forgotPassword((_id as ObjectId).toString())
+  const result = await usersService.forgotPassword({
+    user_id: (_id as ObjectId).toString(),
+    verify
+  })
   return res.json(result)
 }
 
@@ -166,4 +171,35 @@ export const getMeController = async (
     result: user
   })
 }
-//trong messages.ts thêm GET_ME_SUCCESS: 'Get me success'
+
+export const updateMeController = async (
+  req: Request<ParamsDictionary, any, UpdateMeReqBody>,
+  res: Response
+  //next: NextFunction
+) => {
+  //middleware accessTokenValidator đã chạy rồi, nên ta có thể lấy đc user_id từ decoded_authorization và các thông tin cần update
+  const { user_id } = req.decode_authorization as TokenPayLoad
+  //user_id để biết phải cập nhật ai
+  //lấy thông tin mới từ req.body
+  const { body } = req
+  //lấy các property mà client muốn cập nhật
+  //ta sẽ viết hàm updateMe trong user.services
+  //nhận vào user_id và body để cập nhật
+  const result = await usersService.updateMe(user_id, body)
+  return res.json({
+    message: USERS_MESSAGES.UPDATE_ME_SUCCESS,
+    result
+  })
+}
+
+export const getProfileController = async (req: Request<GetProfileReqParams>, res: Response, next: NextFunction) => {
+  //tìm user theo username
+  const { username } = req.params //lấy username từ query params
+  const user = await usersService.getProfile(username)
+  return res.json({
+    message: USERS_MESSAGES.GET_PROFILE_SUCCESS,
+    result: user
+  })
+}
+//usersService.getProfile(username) nhận vào username tìm và return ra ngoài, hàm này chưa viết
+//giờ ta sẽ viết

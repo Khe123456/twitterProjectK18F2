@@ -1,7 +1,7 @@
 //=> lưu vào thư mục models => requests=> sau này có req nào cần định nghĩa body thì nhét vào đây
 
 import { JwtPayload } from 'jsonwebtoken'
-import { TokenType } from '~/constants/enums'
+import { TokenType, UserVerifyStatus } from '~/constants/enums'
 
 //những định nghĩa liên quan đến class user
 export interface RegisterReqBody {
@@ -25,6 +25,7 @@ export interface logoutReqBody {
 export interface TokenPayLoad extends JwtPayload {
   user_id: string
   token_type: TokenType
+  verify: UserVerifyStatus
 }
 
 export interface VerifyEmailReqBody {
@@ -40,3 +41,18 @@ export interface ResetPasswordReqBody {
   password: string
   confirm_password: string
 }
+
+export interface UpdateMeReqBody {
+  name?: string
+  date_of_birth?: string //vì ngta truyền lên string dạng ISO8601, k phải date
+  bio?: string
+  location?: string
+  website?: string
+  username?: string
+  avatar?: string
+  cover_photo?: string
+}
+export interface GetProfileReqParams {
+  username: string
+}
+//vì đây là route patch nên ngta truyền thiếu 1 trong các prop trên cũng k sao

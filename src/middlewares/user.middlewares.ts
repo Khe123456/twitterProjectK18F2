@@ -12,11 +12,13 @@ import { error } from 'console'
 import { Request, Response, NextFunction } from 'express' //express chuyên dùng cung cấp các interface để bổ nghĩa các parameter mình đang có
 import { ParamSchema, checkSchema } from 'express-validator'
 import { JsonWebTokenError } from 'jsonwebtoken'
-import { capitalize } from 'lodash'
+import { PartialRight, capitalize } from 'lodash'
 import { ObjectId } from 'mongodb'
+import { UserVerifyStatus } from '~/constants/enums'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/message'
 import { ErrorWithStatus } from '~/models/Errors'
+import { TokenPayLoad } from '~/models/requests/User.request'
 import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
 import { hashPassword } from '~/utils/crypto'
@@ -90,6 +92,52 @@ const confirmPasswordSchema: ParamSchema = {
   }
 }
 
+const nameSchema: ParamSchema = {
+  notEmpty: {
+    errorMessage: USERS_MESSAGES.NAME_IS_REQUIRED
+  }, //ko đc empty
+  isString: {
+    errorMessage: USERS_MESSAGES.NAME_MUST_BE_A_STRING
+  },
+  trim: true, //xóa dấu cách dư
+  isLength: {
+    options: {
+      min: 1,
+      max: 100
+    },
+    errorMessage: USERS_MESSAGES.NAME_LENGTH_MUST_BE_FROM_1_TO_100
+  }
+}
+
+const dateOfBirthSchema: ParamSchema = {
+  //lấy dữ liệu date_of_birth trên postman:
+  //b1:lên 1trang web bất kì, inspect=>code:
+  //let a = new Date().TOISOString()=> log a ra=> có cái tgian hiện tại
+  isISO8601: {
+    options: {
+      strict: true, //nhập theo fomat ngày thàng năm
+      strictSeparator: true // dấu gạch ngang
+    },
+    errorMessage: USERS_MESSAGES.DATE_OF_BIRTH_BE_ISO8601
+  } //khi chuyển du lieu len database nen chuan hanh iso string
+}
+
+//tí xài cho property avatar và cover_photo
+const imageSchema: ParamSchema = {
+  optional: true,
+  isString: {
+    errorMessage: USERS_MESSAGES.IMAGE_URL_MUST_BE_A_STRING
+  },
+  trim: true, //nên đặt trim dưới này thay vì ở đầu
+  isLength: {
+    options: {
+      min: 1,
+      max: 400
+    },
+    errorMessage: USERS_MESSAGES.IMAGE_URL_LENGTH_MUST_BE_LESS_THAN_400
+  }
+}
+
 export const loginValidator = validate(
   checkSchema(
     {
@@ -156,22 +204,7 @@ export const registerValidator = validate(
   checkSchema(
     {
       //rê chuột vào checkSchema => ctrl enter lấy đc cụm RunnableValidationChains<ValidationChain> đập vào hàm ultils dòng 9
-      name: {
-        notEmpty: {
-          errorMessage: USERS_MESSAGES.NAME_IS_REQUIRED
-        }, //ko đc empty
-        isString: {
-          errorMessage: USERS_MESSAGES.NAME_MUST_BE_A_STRING
-        },
-        trim: true, //xóa dấu cách dư
-        isLength: {
-          options: {
-            min: 1,
-            max: 100
-          },
-          errorMessage: USERS_MESSAGES.NAME_LENGTH_MUST_BE_FROM_1_TO_100
-        }
-      },
+      name: nameSchema,
 
       email: {
         notEmpty: {
@@ -196,18 +229,7 @@ export const registerValidator = validate(
       password: passwordSchema,
       confirm_password: confirmPasswordSchema,
 
-      date_of_birth: {
-        //lấy dữ liệu date_of_birth trên postman:
-        //b1:lên 1trang web bất kì, inspect=>code:
-        //let a = new Date().TOISOString()=> log a ra=> có cái tgian hiện tại
-        isISO8601: {
-          options: {
-            strict: true, //nhập theo fomat ngày thàng năm
-            strictSeparator: true // dấu gạch ngang
-          },
-          errorMessage: USERS_MESSAGES.DATE_OF_BIRTH_BE_ISO8601
-        } //khi chuyển du lieu len database nen chuan hanh iso string
-      }
+      date_of_birth: dateOfBirthSchema
     },
     ['body']
   )
@@ -440,6 +462,103 @@ export const resetPasswordValidator = validate(
       password: passwordSchema,
       confirm_password: confirmPasswordSchema
       //forgot_password_token: forgotPasswordTokenSchema
+    },
+    ['body']
+  )
+)
+
+//ở hàm này mình dùng middleware thông thường, vì mình k cần xử lý ở 'body' hay 'header'
+//mà chỉ cần xử lý decoded_authorization, lấy đc từ middleware accessTokenValidator trước đó
+//bỏ async
+export const verifiedUserValidator = (req: Request, res: Response, next: NextFunction) => {
+  const { verify } = req.decode_authorization as TokenPayLoad
+  if (verify !== UserVerifyStatus.Verified) {
+    return next(
+      new ErrorWithStatus({
+        message: USERS_MESSAGES.USER_NOT_VERIFIED,
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    )
+  }
+  next()
+}
+
+//updateMeValidator sẽ có
+
+export const updateMeValidator = validate(
+  checkSchema(
+    {
+      name: {
+        optional: true, //đc phép có hoặc k
+        ...nameSchema, //phân rã nameSchema ra
+        notEmpty: undefined //ghi đè lên notEmpty của nameSchema
+      },
+      date_of_birth: {
+        optional: true, //đc phép có hoặc k
+        ...dateOfBirthSchema, //phân rã nameSchema ra
+        notEmpty: undefined //ghi đè lên notEmpty của nameSchema
+      },
+      bio: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.BIO_MUST_BE_A_STRING
+        },
+        trim: true, //trim phát đặt cuối, nếu k thì nó sẽ lỗi validatior
+        isLength: {
+          options: {
+            min: 1,
+            max: 200
+          },
+          errorMessage: USERS_MESSAGES.BIO_LENGTH_MUST_BE_LESS_THAN_200
+        }
+      },
+      //giống bio
+      location: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.LOCATION_MUST_BE_A_STRING
+        },
+        trim: true,
+        isLength: {
+          options: {
+            min: 1,
+            max: 200
+          },
+          errorMessage: USERS_MESSAGES.LOCATION_LENGTH_MUST_BE_LESS_THAN_200
+        }
+      },
+      //giống location
+      website: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.WEBSITE_MUST_BE_A_STRING
+        },
+        trim: true,
+        isLength: {
+          options: {
+            min: 1,
+            max: 200
+          },
+
+          errorMessage: USERS_MESSAGES.WEBSITE_LENGTH_MUST_BE_LESS_THAN_200
+        }
+      },
+      username: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING
+        },
+        trim: true,
+        isLength: {
+          options: {
+            min: 1,
+            max: 50
+          },
+          errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_LESS_THAN_50
+        }
+      },
+      avatar: imageSchema,
+      cover_photo: imageSchema
     },
     ['body']
   )

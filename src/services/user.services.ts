@@ -1,6 +1,6 @@
 import User from '~/models/schema/user.schema'
 import databaseService from './database.services'
-import { RegisterReqBody } from '~/models/requests/User.request'
+import { RegisterReqBody, UpdateMeReqBody } from '~/models/requests/User.request'
 import { hashPassword } from '~/utils/crypto'
 import { signToken } from '~/utils/jwt'
 import { TokenType, UserVerifyStatus } from '~/constants/enums'
@@ -8,50 +8,52 @@ import RefreshToken from '~/models/schema/RefreshToken.schema'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/message'
 import { resetPasswordValidator } from '~/middlewares/user.middlewares'
+import HTTP_STATUS from '~/constants/httpStatus'
+import { ErrorWithStatus } from '~/models/Errors'
 
 class UsersService {
   //hàm nhận vào user_Id(để định danh mình là ai) và bỏ vào payload để tạo access_Token
-  private signAcessToken(user_id: string) {
+  private signAcessToken({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     //userid phải viết thường mà trong Doc viết hoa => sai nặng
     //mình kí thì phải giấu=> private//Hàm kí access: token-type: accessToken
     return signToken({
-      payload: { user_id, token_type: TokenType.AccessToken },
+      payload: { user_id, token_type: TokenType.AccessToken, verify },
       options: { expiresIn: process.env.ACESS_TOKEN_EXPIRE_IN }, //ACESS_TOKEN_EXPIRE_IN: lưu cái hết hạn của accessToken //15m: 15 phút
       privateKey: process.env.JWT_SECRET_ACCESS_TOKEN as string
     })
   }
 
   //hàm nhận vào user_Id và bỏ vào payload de tạo refresh_Token
-  private signRefreshToken(user_id: string) {
+  private signRefreshToken({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     return signToken({
-      payload: { user_id, token_type: TokenType.RefreshToken },
+      payload: { user_id, token_type: TokenType.RefreshToken, verify },
       options: { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_IN },
       privateKey: process.env.JWT_SECRET_REFRESH_TOKEN as string
     })
   }
   //hàm sign email verify token
-  private signEmailVerifyToken(user_id: string) {
+  private signEmailVerifyToken({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     return signToken({
-      payload: { user_id, token_type: TokenType.EmailVerificationToken },
+      payload: { user_id, token_type: TokenType.EmailVerificationToken, verify },
       options: { expiresIn: process.env.EMAIL_VERIFY_TOKEN_EXPIRE_IN },
       privateKey: process.env.JWT_SECRETE_EMAIL_VERIFY_TOKEN as string
     })
   }
-  private signForgotPasswordToken(user_id: string) {
+  private signForgotPasswordToken({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     return signToken({
-      payload: { user_id, token_type: TokenType.ForgotPasswordToken },
+      payload: { user_id, token_type: TokenType.ForgotPasswordToken, verify },
       options: { expiresIn: process.env.FORGOT_PASSWORD_TOKEN_EXPIRE_IN },
       privateKey: process.env.JWT_SECRETE_FORGOT_PASSWORD_TOKEN as string
     })
   }
 
   //ký access_token và refresh
-  private signAcessAndRefreshToken(user_id: string) {
+  private signAcessAndRefreshToken({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     return Promise.all([
       //ko cần dùng asyn await vì bản chất nó cũng chỉ để return về 1 Promise. còn thk nào xài mình thì nó tự động asyn await
       //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
-      this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
-      this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
+      this.signAcessToken({ user_id, verify }), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
+      this.signRefreshToken({ user_id, verify }) //ở đây là cái mảng=>ngoặc vuông
     ])
   }
 
@@ -60,9 +62,13 @@ class UsersService {
     const users = await databaseService.users.findOne({ email }) //email:email nhưng 2 giá trị giống nhau thì email là đủ
     return Boolean(users) //có null: ép kiểu thành boolean =>false, object=> true
   }
+
   async register(payload: RegisterReqBody) {
     const user_id = new ObjectId()
-    const email_verify_token = await this.signEmailVerifyToken(user_id.toString())
+    const email_verify_token = await this.signEmailVerifyToken({
+      user_id: user_id.toString(),
+      verify: UserVerifyStatus.Unverified
+    })
     //regiaster nhận vào payload và payload đc dc=inh95 nghĩa = registerrequestbody
     //biến thành object để khi viết code và đọc nó tường minh hơn//payload: là cái dữ liệu đưa lên đưa về
 
@@ -71,13 +77,17 @@ class UsersService {
         //payload lúc này có name,email,pwd,confirmpwd,date_of_birth
         ...payload, //phân rã cái payload //bug:trong payload có dateofbirth, trong users cũng có date ofbirthoverride
         _id: user_id,
+        username: `user${user_id.toString()}`,
         email_verify_token,
         date_of_birth: new Date(payload.date_of_birth), //=>override dateofbirth sẽ lấy giá trị cuar dob kia, string ép kiểu thành Date(do người dùng đưa lên = json)
         password: hashPassword(payload.password) //khi tạo tkhoan thì payload đã có password=>ta sẽ độ lại pwd = hashpsd và pwd nó đưa lên cho mình
       })
     )
 
-    const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id.toString())
+    const [access_token, refresh_token] = await this.signAcessAndRefreshToken({
+      user_id: user_id.toString(),
+      verify: UserVerifyStatus.Unverified
+    })
     //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
     // this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
     //   this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
@@ -93,9 +103,12 @@ class UsersService {
 
     return { access_token, refresh_token } //trả cái object trả về access và refreshToken
   }
-  async login(user_id: string) {
+  async login({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
     //login nhận vào 1 user_id(dùng để tạo access và refreshToken)
-    const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
+    const [access_token, refresh_token] = await this.signAcessAndRefreshToken({
+      user_id,
+      verify
+    })
     //Promise.all: kí cả 2 thằng 1 lúc cho lẹ do nó k ảnh hưởng tới nhau
     // this.signAcessToken(user_id), //dùng kĩ thuật phân rã (mảng thì ngoặc vuông, oject thì ngoặc nhọn) lấy access và refresh
     //   this.signRefreshToken(user_id) //ở đây là cái mảng=>ngoặc vuông
@@ -126,7 +139,10 @@ class UsersService {
       }
     ])
     //tạo ra access_token và refresh_token
-    const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
+    const [access_token, refresh_token] = await this.signAcessAndRefreshToken({
+      user_id: user_id.toString(),
+      verify: UserVerifyStatus.Unverified
+    })
     //lưu refresh_token vào db
     await databaseService.refreshTokens.insertOne(
       new RefreshToken({
@@ -139,7 +155,10 @@ class UsersService {
 
   async resendEmailVerify(user_id: string) {
     //tạo ra email_verify_token
-    const email_verify_token = await this.signEmailVerifyToken(user_id.toString())
+    const email_verify_token = await this.signEmailVerifyToken({
+      user_id,
+      verify: UserVerifyStatus.Unverified
+    })
 
     //update lai server
     await databaseService.users.updateOne({ _id: new ObjectId(user_id) }, [
@@ -156,8 +175,11 @@ class UsersService {
 
     return { message: USERS_MESSAGES.RESEND_EMAIL_VERIFY_SUCCESS }
   }
-  async forgotPassword(user_id: string) {
-    const forgot_password_token = await this.signForgotPasswordToken(user_id)
+  async forgotPassword({ user_id, verify }: { user_id: string; verify: UserVerifyStatus }) {
+    const forgot_password_token = await this.signForgotPasswordToken({
+      user_id,
+      verify
+    })
     //update lai user
     await databaseService.users.updateOne({ _id: new ObjectId(user_id) }, [
       {
@@ -205,6 +227,60 @@ class UsersService {
       }
     )
     return user // sẽ k có những thuộc tính nêu trên, tránh bị lộ thông tin
+  }
+
+  async updateMe(user_id: string, payload: UpdateMeReqBody) {
+    //payload là những gì người dùng đã gữi lên ở body request
+    //có vấn đề là người dùng gữi date_of_birth lên dưới dạng string iso8601
+    //nhưng ta cần gữi lên mongodb dưới dạng date
+    //nên
+    const _payload = payload.date_of_birth ? { ...payload, date_of_birth: new Date(payload.date_of_birth) } : payload
+    //mongo cho ta 2 lựa chọn update là updateOne và findOneAndUpdate
+    //findOneAndUpdate thì ngoài update nó còn return về document đã update
+    //cập nhật _payload lên db
+    const user = await databaseService.users.findOneAndUpdate(
+      { _id: new ObjectId(user_id) },
+      [
+        {
+          $set: {
+            ..._payload,
+            updated_at: '$$NOW'
+          }
+        }
+      ],
+      {
+        returnDocument: 'after', //trả về document sau khi update, nếu k thì nó trả về document cũ
+        projection: {
+          //chặn các property k cần thiết
+          password: 0,
+          email_verify_token: 0,
+          forgot_password_token: 0
+        }
+      }
+    )
+    return user //đây là document sau khi update
+  }
+  async getProfile(username: string) {
+    const user = await databaseService.users.findOne(
+      { username },
+      {
+        projection: {
+          password: 0,
+          email_verify_token: 0,
+          forgot_password_token: 0,
+          verify: 0,
+          create_at: 0,
+          update_at: 0
+        }
+      }
+    )
+    if (user == null) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.USER_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+    return user
   }
 }
 //trong dó projection giúp ta loại bỏ lấy về các thuộc tính như password, email_verify_token, forgot_password_token
