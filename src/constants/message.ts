@@ -35,5 +35,12 @@ export const USERS_MESSAGES = {
   EMAIL_VERIFY_TOKEN_IS_REQUIRED: 'EMAIL_VERIFY_TOKEN_IS_REQUIRED',
   USER_NOT_FOUND: 'User not found',
   EMAIL_ALREADY_VERIFIED_BEFORE: 'Email already verified before',
-  VERIFY_EMAIL_SUCCESS: 'Verify email success'
+  VERIFY_EMAIL_SUCCESS: 'Verify email success',
+  USER_BANNED: ' User banned',
+  RESEND_EMAIL_VERIFY_SUCCESS: 'Resend email verify success',
+  EMAIL_VERIFY_TOKEN_IS_INCORRECT: 'Email verify token is incorrect',
+  CHECK_EMAIL_TO_REST_PASSWORD: 'Check email to rest password',
+  FORGOT_PASSWORD_TOKEN_IS_REQUIRED: 'FORGOT_PASSWORD_TOKEN_IS_REQUIRED',
+  VERIFY_FORGOT_PASSWORD_TOKEN_SUCCESS: 'VERIFY_FORGOT_PASSWORD_TOKEN_SUCCESS',
+  FORGOT_PASSWORD_TOKEN_IS_INCORRECT: 'FORGOT_PASSWORD_TOKEN_IS_INCORRECT'
 } as const //as const: biến thành hằng số=> ko ai thay đổi đc

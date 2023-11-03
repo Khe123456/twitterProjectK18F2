@@ -3,18 +3,24 @@ import { Router } from 'express'
 import {
   accessTokenValidator,
   emailVerifyTokenValidator,
+  forgotPasswordValidator,
   loginValidator,
   refreshTokenValidator,
-  registerValidator
+  registerValidator,
+  verifyForgotPasswordTokenValidator
 } from '~/middlewares/user.middlewares'
 import {
   emailVerifyTokenController,
+  forgotPasswordController,
   loginController,
   logoutController,
-  registerController
+  registerController,
+  resendEmailVerifyController,
+  verifyForgotPasswordTokenController
 } from '~/controllers/user.controller'
 import { error } from 'console'
 import { wrapAsync } from '~/utils/handlers'
+import { wrap } from 'module'
 
 const userRoute = Router()
 /*
@@ -57,10 +63,43 @@ userRoute.post('/logout', accessTokenValidator, refreshTokenValidator, wrapAsync
  neu ma em nhap vao link thi se tao ra req gui len mail_verify_token len server
  server ktra  email_verify_token co hop le hay ko
  thi tu decoded_email_verify_token lay ra user_id
- va va0 user_id đó de update email_verify_token thành '', verify = 1, update_at
+ va va0 user_id đó de update email_verify_token thành ''(rỗng), verify = 1, update_at
  path: /users/verify-email
  method:POST
  body: {email_verify_token: string}
  */
 userRoute.post('/verify-email', emailVerifyTokenValidator, wrapAsync(emailVerifyTokenController))
+
+/*
+des: resend email verify token
+khi mail thất lạc hoac email_verify_token hết hạn thì người dùng có nhu cầu resend email_verify_token
+
+method: post
+path: /uers/resend-verify-email
+headers: {Authorization: "Bearer <access_token>"}// dang nhap dc mới resend //do truyền access nên header hợp lý hơn
+body: {}
+*/
+userRoute.post('/resend-verify-email', accessTokenValidator, wrapAsync(resendEmailVerifyController))
+
+/*
+des: khi người dùng quên mat khau ho gừi email de xin mình tạo cho họ 1 cái forgot-password
+method: POST
+body: {email: string}
+*/
+userRoute.post('/forgot-password', forgotPasswordValidator, wrapAsync(forgotPasswordController))
+
+/*
+Khi nguoi dung nhap vao link trong email de reset password họ sẽ gửi 1 req kem fforgotpaassword len server 
+server se kiem tra forgotpassword_token co hop le hay ko
+sau do chuyen huong nguyoi dung den trang reset password
+path: /users/verify-forgot-password
+method: POST
+Header: không cần, vì  ngta quên mật khẩu rồi, thì sao mà đăng nhập để có authen đc
+body: {forgot_password_token: string}
+*/
+userRoute.post(
+  '/verify-forgot-password',
+  verifyForgotPasswordTokenValidator,
+  wrapAsync(verifyForgotPasswordTokenController)
+)
 export default userRoute
